@@ -25,8 +25,8 @@
 				"ms-python.python",
 				"github.vscode-pull-request-github",
 				"ms-azuretools.vscode-docker",
-				"ms-toolsai.jupyter"
-
+				"ms-toolsai.jupyter",
+				"eamodio.gitlens"
 			]
 		}
 	}
