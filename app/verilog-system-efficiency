@@ -1,0 +1,56 @@
+module power_scheduler(
+    input wire clk,                // System clock
+    input wire rst_n,              // Active low reset
+    input wire interrupt_event,    // Interrupt event to wake up system (load threshold)
+    input wire [7:0] load_level,   // Load threshold level
+    output reg power_mode,         // Power mode: 1 = active, 0 = sleep
+    output reg [15:0] battery_life // Battery life estimation
+);
+
+// Parameters for power modes
+parameter ACTIVE_MODE_CURRENT = 10;   // Active mode current consumption (mA)
+parameter SLEEP_MODE_CURRENT = 1;     // Sleep mode current consumption (mA)
+parameter THRESHOLD = 100;            // Load threshold for wake up
+parameter BATTERY_CAPACITY = 10000;   // Total battery capacity in mAh
+
+// Internal signals
+reg [31:0] duty_cycle_counter;        // Counter for duty cycle
+reg [31:0] active_time;               // Active mode duration
+reg [31:0] sleep_time;                // Sleep mode duration
+reg [15:0] battery_consumption;       // Current consumption based on duty cycle
+
+// Power mode control and battery estimation logic
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        power_mode <= 0;  // Start in sleep mode
+        duty_cycle_counter <= 0;
+        active_time <= 0;
+        sleep_time <= 0;
+        battery_life <= BATTERY_CAPACITY;
+        battery_consumption <= 0;
+    end else begin
+        // Duty cycle counter
+        duty_cycle_counter <= duty_cycle_counter + 1;
+        
+        // Power mode decision
+        if (load_level > THRESHOLD || interrupt_event) begin
+            power_mode <= 1;  // Active mode
+            active_time <= active_time + 1;
+        end else begin
+            power_mode <= 0;  // Sleep mode
+            sleep_time <= sleep_time + 1;
+        end
+
+        // Battery consumption calculation
+        if (power_mode == 1) begin
+            battery_consumption <= ACTIVE_MODE_CURRENT * active_time + SLEEP_MODE_CURRENT * sleep_time;
+        end else begin
+            battery_consumption <= SLEEP_MODE_CURRENT * sleep_time;
+        end
+        
+        // Battery life estimation
+        battery_life <= BATTERY_CAPACITY - (battery_consumption / 3600);  // mAh
+    end
+end
+
+endmodule
